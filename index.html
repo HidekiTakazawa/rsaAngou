@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA暗号学習アプリ</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5; /* Indigo 600 */
+            --primary-color-dark: #4338ca; /* Indigo 700 */
+            --secondary-color: #64748b; /* Slate 500 */
+            --bg-color: #f1f5f9; /* Slate 100 */
+            --text-color: #0f172a; /* Slate 900 */
+            --subtle-text-color: #475569; /* Slate 600 */
+            --border-color: #e2e8f0; /* Slate 200 */
+            --card-bg: #ffffff;
+            --code-bg: #eef2ff; /* Indigo 50 */
+            --code-text: #312e81; /* Indigo 900 */
+            --code-border: #c7d2fe; /* Indigo 200 */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --input-bg: #f8fafc; /* Slate 50 */
+            --focus-shadow: rgba(79, 70, 229, 0.1);
+            --spinner-track: rgba(0,0,0,0.1);
+        }
+        [data-theme="dark"] {
+            --primary-color: #6366f1; /* Indigo 500 */
+            --primary-color-dark: #4f46e5; /* Indigo 600 */
+            --secondary-color: #94a3b8; /* Slate 400 */
+            --bg-color: #0f172a; /* Slate 900 */
+            --text-color: #f1f5f9; /* Slate 100 */
+            --subtle-text-color: #94a3b8; /* Slate 400 */
+            --border-color: #334155; /* Slate 700 */
+            --card-bg: #1e293b; /* Slate 800 */
+            --code-bg: #334155; /* Slate 700 */
+            --code-text: #e2e8f0; /* Slate 200 */
+            --code-border: #475569; /* Slate 600 */
+            --input-bg: #1e293b; /* Slate 800 */
+            --focus-shadow: rgba(99, 102, 241, 0.2);
+            --spinner-track: rgba(255,255,255,0.1);
+        }
+        /* スピナー用のスタイル */
+        .spinner { border: 4px solid var(--spinner-track); border-top: 4px solid var(--primary-color); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; margin: 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Inter", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px 40px;
+            position: relative;
+        }
+        header {
+            background-color: transparent;
+            color: var(--text-color);
+            padding: 2.5rem 1rem;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+        nav {
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: 0;
+            padding: 0 10px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        nav a {
+            color: var(--subtle-text-color);
+            text-decoration: none;
+            padding: 12px 16px;
+            border-radius: 0;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px; /* To align with the nav border */
+        }
+        nav a:hover {
+            background-color: transparent;
+            color: var(--primary-color);
+        }
+        nav a.active {
+            background-color: transparent;
+            color: var(--primary-color);
+            font-weight: 600;
+            border-bottom-color: var(--primary-color);
+        }
+        main section {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        main section.active {
+            display: block;
+        }
+        h2 {
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--subtle-text-color);
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: 'Fira Code', 'Source Code Pro', monospace;
+            background-color: var(--input-bg);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--focus-shadow);
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            box-shadow: var(--shadow-sm);
+        }
+        button:hover {
+            background-color: var(--primary-color-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        button.secondary:hover {
+            background-color: #475569; /* Slate 600 */
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #theme-toggle {
+            position: absolute;
+            top: 2.5rem;
+            right: 20px;
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--subtle-text-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #theme-toggle:hover {
+            background-color: var(--code-bg);
+            color: var(--text-color);
+            transform: none; /* override generic button hover */
+            box-shadow: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 6px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Fira Code', 'Source Code Pro', monospace;
+            color: var(--code-text);
+            line-height: 1.5;
+        }
+        .description {
+            background-color: var(--input-bg);
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 25px;
+            border-left: 4px solid var(--border-color);
+        }
+        fieldset {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        legend {
+            padding: 0 10px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <button id="theme-toggle" title="テーマを切り替え">🌙</button>
+        <header>
+            <h1>RSA暗号学習アプリ</h1>
+        </header>
+
+        <nav id="nav-menu">
+            <a href="#menu" data-section="menu" class="active">ホーム</a>
+            <a href="#extgcd" data-section="extgcd">拡張ユークリッド互除法</a>
+            <a href="#expmod" data-section="expmod">繰り返し二乗法</a>
+            <a href="#keygen" data-section="keygen">キーペア作成</a>
+            <a href="#encrypt" data-section="encrypt">暗号化</a>
+            <a href="#decrypt" data-section="decrypt">復号</a>
+            <a href="#create-signed-message" data-section="create-signed-message">メッセージ作成(署名付)</a>
+            <a href="#read-signed-message" data-section="read-signed-message">メッセージ復号(署名検証)</a>
+            <a href="#prime-list" data-section="prime-list">付録: 素数一覧</a>
+        </nav>
+
+        <main>
+            <!-- ホーム画面 -->
+            <section id="menu">
+                <h2>ようこそ！</h2>
+                <p>このアプリは、公開鍵暗号方式の代表であるRSA暗号の仕組みを学ぶためのツールです。</p>
+                <p>上のメニューから各機能を体験してみてください。</p>
+                <ol>
+                    <li><b>拡張ユークリッド互除法</b>: RSAのキーペア作成に使われる数学的な道具です。</li>
+                    <li><b>繰り返し二乗法</b>: 暗号化・復号の際の巨大なべき乗計算を高速に行うアルゴリズムです。</li>
+                    <li><b>キーペア作成</b>: 2つの素数から、暗号化に使う「公開鍵」と復号に使う「秘密鍵」のペアを作成します。</li>
+                    <li><b>暗号化</b>: 平文（メッセージ）を公開鍵で暗号化します。</li>
+                    <li><b>復号</b>: 暗号文を秘密鍵で元の平文に戻します。</li>
+                    <li><b>メッセージ作成(署名付)</b>: 送信者の秘密鍵で「署名」し、受信者の公開鍵で「暗号化」することで、安全なメッセージを作成します。</li>
+                    <li><b>メッセージ復号(署名検証)</b>: 受信したメッセージを、まず受信者の秘密鍵で「復号」し、次に送信者の公開鍵で「署名を検証」して元の内容を取り出します。</li>
+                    <li><b>付録: 素数一覧</b>: キーペア作成に使える大きな素数のリストです。ここから好きな素数を選んで試せます。</li>
+                </ol>
+                <div class="description">
+                    <h3>RSA暗号の仕組み</h3>
+                    <p>RSA暗号の原理は、古代ギリシャの数学者ユークリッドや、17世紀の数学者フェルマー、18世紀の数学者オイラーの業績に基づいています。具体的には、「ユークリッドの互除法」や、フェルマーの小定理を一般化した「オイラーの定理」という数論の定理が使われています。</p>
+                    <ol>
+                        <li>
+                            <strong>巨大な素数 p, q を用意する</strong><br>
+                            まず、非常に大きな素数を2つ（p と q）用意し、これらは秘密にします。
+                        </li>
+                        <li>
+                            <strong>公開鍵 {e, n} を計算する</strong><br>
+                            p と q の積 <code>n = p * q</code> を計算します。この <code>n</code> は公開鍵の一部となります。<code>n</code> から元の p と q を見つけ出すこと（素因数分解）が、コンピュータを使っても非常に困難であることが、RSA暗号の安全性の根拠です。<br>
+                            次に、<code>φ(n) = (p-1) * (q-1)</code> と互いに素（最大公約数が1）となる数 <code>e</code> を選びます。この <code>e</code> も公開鍵の一部です。これで、誰でも使える**公開鍵 {e, n}** が完成します。
+                        </li>
+                        <li>
+                            <strong>秘密鍵 {d, n} を計算する</strong><br>
+                            <code>e * d</code> を <code>φ(n)</code> で割った余りが1となる数 <code>d</code> を計算します（<code>e*d ≡ 1 (mod φ(n))</code>）。この計算には拡張ユークリッド互除法が使われます。こうして見つかった <code>d</code> が、自分だけが知っている**秘密鍵**となります。
+                        </li>
+                        <li>
+                            <strong>暗号化と復号</strong><br>
+                            平文（メッセージ）を数値 <code>m</code> としたとき、以下の計算で暗号化と復号が行えます。<br>
+                            <b>暗号化</b>: <code>c = m<sup>e</sup> mod n</code> （公開鍵 <code>e</code> で暗号化し、暗号文 <code>c</code> を作る）<br>
+                            <b>復号</b>: <code>m = c<sup>d</sup> mod n</code> （秘密鍵 <code>d</code> で復号し、元の平文 <code>m</code> に戻す）<br>
+                            この関係が成り立つのは、<code>m<sup>e*d</sup> ≡ m (mod n)</code> というオイラーの定理から導かれる性質のおかげです。
+                        </li>
+                        <li>
+                            <strong>eとdの役割の交換</strong><br>
+                            上記の暗号化・復号の計算において、<code>e</code> と <code>d</code> の役割を入れ替えることも可能です。この性質が、メッセージの送信者が本人であることを証明する「デジタル署名」に応用されています。
+                        </li>
+                    </ol>
+                    </div>
+                <div class="description">
+                    <h3>公開鍵暗号方式による安全な通信（デジタル署名付き）</h3>
+                    <p>このアプリでは、デジタル署名を付与した暗号化通信を体験できます。これは、送信者が本人であること（認証）と、メッセージが改ざんされていないこと（完全性）を保証しつつ、第三者には内容を読まれないようにする（機密性）ための仕組みです。</p>
+                    <ol>
+                        <li>各個人は、自分だけの「秘密鍵」と、みんなに公開する「公開鍵」のペアを持ちます。</li>
+                        <li>送信者は、まず送りたいメッセージ（平文）を<b>送信者の秘密鍵</b>で暗号化します。これが「デジタル署名」になります。</li>
+                        <li>次に、署名したデータを<b>受信者の公開鍵</b>で暗号化します。これでメッセージの内容が保護されます。</li>
+                        <li>受信者は、受け取った暗号文をまず<b>受信者の秘密鍵</b>で復号します。</li>
+                        <li>最後に、出てきたデータを<b>送信者の公開鍵</b>で復号（署名検証）します。これで元のメッセージが手に入ります。</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- 拡張ユークリッド互除法 -->
+            <section id="extgcd">
+                <h2>拡張ユークリッド互除法 体験</h2>
+                <div class="input-group">
+                    <label for="extgcd-a">整数 a:</label>
+                    <input type="text" id="extgcd-a" placeholder="例: 240">
+                </div>
+                <div class="input-group">
+                    <label for="extgcd-b">整数 b:</label>
+                    <input type="text" id="extgcd-b" placeholder="例: 46">
+                </div>
+                <button id="run-extgcd">計算実行</button>
+                <div id="extgcd-result" class="result"></div>
+                <div class="description">
+                    <h3>アルゴリズム説明</h3>
+                    <p>拡張ユークリッドの互除法は、二元一次不定方程式 <b>ax + by = gcd(a, b)</b> を満たす整数解 (x, y) と、aとbの最大公約数 d (gcd) を見つけるアルゴリズムです。</p>
+                    <p>RSA暗号では、秘密鍵を計算する際にこのアルゴリズムが使われます。</p>
+                </div>
+            </section>
+
+            <!-- 繰り返し二乗法 -->
+            <section id="expmod">
+                <h2>繰り返し二乗法 体験</h2>
+                <div class="input-group">
+                    <label for="expmod-a">基数 a (a^n):</label>
+                    <input type="text" id="expmod-a" placeholder="例: 3">
+                </div>
+                <div class="input-group">
+                    <label for="expmod-n">指数 n (a^n):</label>
+                    <input type="text" id="expmod-n" placeholder="例: 100">
+                </div>
+                <div class="input-group">
+                    <label for="expmod-p">法 p (mod p):</label>
+                    <input type="text" id="expmod-p" placeholder="例: 101">
+                </div>
+                <button id="run-expmod">計算実行</button>
+                <div id="expmod-result" class="result"></div>
+                <div class="description">
+                    <h3>アルゴリズム説明</h3>
+                    <p>繰り返し二乗法は、<b>a<sup>n</sup> mod p</b> のような、非常に大きな数のべき乗とその剰余を効率的に計算するアルゴリズムです。</p>
+                    <p>例えば、3<sup>100</sup> のような天文学的な数でも、この方法を使えばコンピュータで瞬時に計算できます。RSAの暗号化・復号処理の核となる計算です。</p>
+                </div>
+            </section>
+
+            <!-- キーペア作成 -->
+            <section id="keygen">
+                <h2>公開鍵と秘密鍵の作成</h2>
+                <div class="input-group">
+                    <label for="keygen-p">素数 p:</label>
+                    <input type="text" id="keygen-p" placeholder="例: 90011 (素数一覧から選択)">
+                </div>
+                <div class="input-group">
+                    <label for="keygen-q">素数 q:</label>
+                    <input type="text" id="keygen-q" placeholder="例: 90017 (pとは異なる素数)">
+                </div>
+                <div class="input-group">
+                    <label for="keygen-e">公開指数 e ( (p-1)(q-1)と互いに素な数 ):</label>
+                    <input type="text" id="keygen-e" placeholder="例: 65537 (一般的によく使われる値)">
+                </div>
+                <div class="button-group">
+                    <button id="set-random-primes" class="secondary">ランダムな素数をセット</button>
+                    <button id="run-keygen">キーペア作成</button>
+                </div>
+                <div id="keygen-result" class="result"></div>
+            </section>
+
+            <!-- 暗号化 -->
+            <section id="encrypt">
+                <h2>暗号化 (公開鍵を使用)</h2>
+                <div class="input-group">
+                    <label for="encrypt-m">平文 M (数値):</label>
+                    <textarea id="encrypt-m" rows="3" placeholder="例: 65 (法nより小さい数値)"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="encrypt-e">公開指数 e:</label>
+                    <textarea id="encrypt-e" rows="3" placeholder="キーペア作成で生成された公開指数e"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="encrypt-n">法 n:</label>
+                    <textarea id="encrypt-n" rows="3" placeholder="キーペア作成で生成された法n"></textarea>
+                </div>
+                <button id="run-encrypt">暗号化実行</button>
+                <div id="encrypt-result" class="result"></div>
+            </section>
+
+            <!-- 復号 -->
+            <section id="decrypt">
+                <h2>復号 (秘密鍵を使用)</h2>
+                <div class="input-group">
+                    <label for="decrypt-c">暗号文 C:</label>
+                    <textarea id="decrypt-c" rows="3" placeholder="暗号化で生成された暗号文C"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="decrypt-d">秘密指数 d:</label>
+                    <textarea id="decrypt-d" rows="3" placeholder="キーペア作成で生成された秘密指数d"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="decrypt-n">法 n:</label>
+                    <textarea id="decrypt-n" rows="3" placeholder="キーペア作成で生成された法n"></textarea>
+                </div>
+                <button id="run-decrypt">復号実行</button>
+                <div id="decrypt-result" class="result"></div>
+            </section>
+
+            <!-- メッセージ作成（署名と暗号化） -->
+            <section id="create-signed-message">
+                <h2>メッセージ作成（署名と暗号化）</h2>
+                <p>漢字や絵文字を含む文章を、指定したキーで署名・暗号化します。</p>
+                <div class="input-group">
+                    <label for="create-message-text">送信したい文章（平文）:</label>
+                    <textarea id="create-message-text" rows="4">これは秘密のメッセージです。
+こんにちは、世界！
+Hello, World! 👋</textarea>
+                </div>
+
+                <fieldset>
+                    <legend><strong>送信者 (A) のキー</strong> (これで署名)</legend>
+                    <div class="input-group"><label for="create-p-a">素数 p:</label><input type="text" id="create-p-a" placeholder="送信者Aの素数p"></div>
+                    <div class="input-group"><label for="create-q-a">素数 q:</label><input type="text" id="create-q-a" placeholder="送信者Aの素数q"></div>
+                    <div class="input-group"><label for="create-e-a">公開指数 e:</label><input type="text" id="create-e-a" placeholder="送信者Aの公開指数e"></div>
+                </fieldset>
+
+                <fieldset>
+                    <legend><strong>受信者 (B) の公開鍵</strong> (これで暗号化)</legend>
+                    <div class="input-group"><label for="create-n-b">法 n:</label><input type="text" id="create-n-b" placeholder="受信者Bの法n"></div>
+                    <div class="input-group"><label for="create-e-b">公開指数 e:</label><input type="text" id="create-e-b" placeholder="受信者Bの公開指数e"></div>
+                </fieldset>
+
+                <button id="run-create-message">メッセージ作成実行</button>
+                <div class="spinner" id="create-spinner"></div>
+                <div id="create-message-result" class="result"></div>
+            </section>
+
+            <!-- メッセージ復号（復号と署名検証） -->
+            <section id="read-signed-message">
+                <h2>メッセージ復号（復号と署名検証）</h2>
+                <p>署名・暗号化されたメッセージを元の文章に戻します。</p>
+                <div class="input-group">
+                    <label for="read-ciphertext">受信した暗号文（カンマ区切り）:</label>
+                    <textarea id="read-ciphertext" rows="6" placeholder="メッセージ作成で生成されたカンマ区切りの暗号文"></textarea>
+                </div>
+
+                <fieldset>
+                    <legend><strong>受信者 (B) のキー</strong> (これで復号)</legend>
+                    <div class="input-group"><label for="read-p-b">素数 p:</label><input type="text" id="read-p-b" placeholder="受信者Bの素数p"></div>
+                    <div class="input-group"><label for="read-q-b">素数 q:</label><input type="text" id="read-q-b" placeholder="受信者Bの素数q"></div>
+                    <div class="input-group"><label for="read-e-b">公開指数 e:</label><input type="text" id="read-e-b" placeholder="受信者Bの公開指数e"></div>
+                </fieldset>
+
+                <fieldset>
+                    <legend><strong>送信者 (A) の公開鍵</strong> (これで署名検証)</legend>
+                    <div class="input-group"><label for="read-n-a">法 n:</label><input type="text" id="read-n-a" placeholder="送信者Aの法n"></div>
+                    <div class="input-group"><label for="read-e-a">公開指数 e:</label><input type="text" id="read-e-a" placeholder="送信者Aの公開指数e"></div>
+                </fieldset>
+
+                <button id="run-read-message">メッセージ復号実行</button>
+                <div class="spinner" id="read-spinner"></div>
+                <div id="read-message-result" class="result"></div>
+            </section>
+            <!-- 付録: 素数一覧 -->
+            <section id="prime-list">
+                <h2>付録: 90000から99999までの素数一覧</h2>
+                <p>キーペア作成時に使用できる素数の例です。ここから2つ選んで「キーペア作成」画面のpとqに入力してみてください。</p>
+                <div class="result">
+90001, 90007, 90011, 90017, 90019, 90023, 90031, 90053, 90059, 90067, 90071, 90073, 90089, 90107, 90121, 90127, 90149, 90163, 90173, 90187, 90191, 90197, 90199, 90203, 90217, 90227, 90239, 90247, 90263, 90271, 90281, 90289, 90313, 90353, 90359, 90371, 90373, 90379, 90397, 90401, 90403, 90407, 90437, 90439, 90469, 90473, 90481, 90499, 90511, 90523, 90527, 90529, 90533, 90547, 90583, 90599, 90617, 90619, 90631, 90641, 90647, 90659, 90677, 90679, 90697, 90703, 90709, 90731, 90749, 90787, 90793, 90803, 90821, 90823, 90833, 90841, 90847, 90863, 90887, 90901, 90907, 90911, 90917, 90931, 90947, 90971, 90977, 90989, 90997, 91009, 91019, 91033, 91079, 91081, 91097, 91099, 91121, 91127, 91129, 91139, 91141, 91151, 91153, 91159, 91163, 91183, 91193, 91199, 91229, 91237, 91243, 91249, 91253, 91283, 91291, 91297, 91303, 91309, 91331, 91367, 91369, 91373, 91381, 91387, 91393, 91397, 91411, 91423, 91433, 91453, 91457, 91459, 91463, 91493, 91499, 91513, 91529, 91541, 91571, 91573, 91577, 91583, 91591, 91621, 91631, 91639, 91673, 91691, 91703, 91711, 91733, 91753, 91757, 91771, 91781, 91801, 91807, 91811, 91813, 91823, 91837, 91841, 91867, 91873, 91909, 91921, 91939, 91943, 91951, 91957, 91961, 91967, 91969, 91997, 92003, 92009, 92033, 92041, 92051, 92077, 92083, 92107, 92111, 92119, 92143, 92153, 92173, 92177, 92179, 92189, 92203, 92219, 92221, 92227, 92233, 92237, 92243, 92251, 92269, 92297, 92311, 92317, 92333, 92347, 92353, 92357, 92363, 92369, 92377, 92381, 92383, 92387, 92399, 92401, 92413, 92419, 92431, 92459, 92461, 92467, 92479, 92489, 92503, 92507, 92551, 92557, 92567, 92569, 92581, 92593, 92623, 92627, 92639, 92641, 92647, 92657, 92669, 92671, 92681, 92683, 92693, 92699, 92707, 92717, 92723, 92737, 92753, 92761, 92767, 92779, 92789, 92791, 92801, 92809, 92821, 92831, 92849, 92857, 92861, 92863, 92867, 92893, 92899, 92921, 92927, 92941, 92951, 92957, 92959, 92987, 92993, 93001, 93047, 93053, 93059, 93077, 93083, 93089, 93097, 93103, 93113, 93131, 93133, 93139, 93151, 93169, 93179, 93187, 93199, 93229, 93239, 93241, 93251, 93253, 93257, 93263, 93281, 93283, 93287, 93307, 93319, 93323, 93329, 93337, 93371, 93377, 93383, 93407, 93419, 93427, 93463, 93479, 93481, 93487, 93491, 93493, 93497, 93503, 93523, 93529, 93553, 93557, 93559, 93563, 93581, 93601, 93607, 93629, 93637, 93683, 93701, 93703, 93719, 93739, 93761, 93763, 93787, 93809, 93811, 93827, 93851, 93871, 93887, 93889, 93893, 93901, 93911, 93913, 93923, 93937, 93941, 93949, 93967, 93971, 93979, 93983, 93997, 94007, 94009, 94033, 94049, 94057, 94063, 94079, 94099, 94109, 94111, 94117, 94121, 94151, 94153, 94169, 94201, 94207, 94219, 94229, 94253, 94261, 94273, 94291, 94307, 94309, 94321, 94327, 94331, 94343, 94349, 94351, 94379, 94397, 94399, 94421, 94427, 94433, 94439, 94441, 94447, 94463, 94477, 94483, 94513, 94529, 94531, 94541, 94543, 94547, 94559, 94561, 94573, 94583, 94597, 94603, 94613, 94621, 94649, 94651, 94687, 94693, 94709, 94723, 94727, 94747, 94771, 94777, 94781, 94789, 94793, 94811, 94819, 94823, 94837, 94841, 94847, 94849, 94873, 94889, 94903, 94907, 94933, 94949, 94951, 94961, 94993, 94999, 95003, 95009, 95021, 95027, 95063, 95071, 95083, 95087, 95089, 95093, 95101, 95107, 95111, 95131, 95143, 95153, 95177, 95189, 95191, 95203, 95213, 95219, 95231, 95233, 95239, 95257, 95261, 95267, 95273, 95279, 95287, 95311, 95317, 95327, 95339, 95369, 95383, 95393, 95401, 95413, 95419, 95429, 95441, 95443, 95461, 95467, 95471, 95479, 95483, 95507, 95527, 95531, 95539, 95549, 95561, 95569, 95581, 95597, 95603, 95617, 95621, 95629, 95633, 95651, 95701, 95707, 95713, 95717, 95723, 95731, 95737, 95747, 95773, 95783, 95789, 95791, 95801, 95803, 95813, 95819, 95857, 95869, 95873, 95881, 95891, 95911, 95917, 95923, 95929, 95947, 95957, 95959, 95971, 95987, 95989, 96001, 96013, 96017, 96043, 96053, 96059, 96079, 96097, 96137, 96149, 96157, 96167, 96179, 96181, 96199, 96211, 96221, 96223, 96233, 96259, 96263, 96269, 96281, 96289, 96293, 96323, 96329, 96331, 96337, 96353, 96377, 96401, 96419, 96431, 96443, 96451, 96457, 96461, 96469, 96479, 96487, 96493, 96497, 96517, 96527, 96553, 96557, 96581, 96587, 96589, 96601, 96643, 96661, 96667, 96671, 96697, 96703, 96731, 96737, 96739, 96749, 96757, 96763, 96769, 96779, 96787, 96797, 96799, 96821, 96823, 96827, 96847, 96851, 96857, 96893, 96907, 96911, 96931, 96953, 96959, 96973, 96979, 96989, 96997, 97001, 97003, 97007, 97021, 97039, 97073, 97081, 97103, 97117, 97127, 97151, 97157, 97159, 97169, 97171, 97177, 97187, 97213, 97231, 97241, 97259, 97283, 97301, 97303, 97327, 97367, 97369, 97373, 97379, 97381, 97387, 97397, 97423, 97429, 97441, 97453, 97459, 97463, 97499, 97501, 97511, 97523, 97547, 97549, 97553, 97561, 97571, 97577, 97579, 97583, 97607, 97609, 97613, 97649, 97651, 97673, 97687, 97711, 97729, 97771, 97777, 97787, 97789, 97813, 97829, 97841, 97843, 97847, 97849, 97859, 97861, 97871, 97879, 97883, 97919, 97927, 97931, 97943, 97961, 97967, 97973, 97987, 98009, 98011, 98017, 98041, 98047, 98057, 98081, 98101, 98123, 98129, 98143, 98179, 98207, 98213, 98221, 98227, 98251, 98257, 98269, 98297, 98299, 98317, 98321, 98323, 98327, 98347, 98369, 98377, 98387, 98389, 98407, 98411, 98419, 98429, 98443, 98453, 98459, 98467, 98473, 98479, 98491, 98507, 98519, 98533, 98543, 98561, 98563, 98573, 98597, 98621, 98627, 98639, 98641, 98663, 98669, 98689, 98711, 98713, 98717, 98729, 98731, 98737, 98773, 98779, 98801, 98807, 98809, 98837, 98849, 98867, 98869, 98873, 98887, 98893, 98897, 98899, 98909, 98911, 98927, 98929, 98939, 98947, 98953, 98963, 98981, 98993, 98999, 99013, 99017, 99023, 99041, 99053, 99079, 99083, 99089, 99103, 99109, 99119, 99131, 99133, 99137, 99139, 99149, 99173, 99181, 99191, 99223, 99233, 99241, 99251, 99257, 99259, 99277, 99289, 99317, 99347, 99349, 99367, 99371, 99377, 99391, 99397, 99401, 99409, 99431, 99439, 99469, 99487, 99497, 99523, 99527, 99529, 99551, 99559, 99563, 99571, 99577, 99581, 99607, 99611, 99623, 99643, 99661, 99667, 99679, 99689, 99707, 99709, 99713, 99719, 99721, 99733, 99761, 99767, 99787, 99793, 99809, 99817, 99823, 99829, 99833, 99839, 99859, 99871, 99877, 99881, 99901, 99907, 99923, 99929, 99961, 99971, 99989, 99991
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Theme Control ---
+            const themeToggle = document.getElementById('theme-toggle');
+            const docElement = document.documentElement;
+
+            const applyTheme = (theme) => {
+                docElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+                themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            };
+
+            const toggleTheme = () => {
+                const currentTheme = docElement.getAttribute('data-theme') || 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                applyTheme(newTheme);
+            };
+
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // Initial theme setup
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme) {
+                applyTheme(savedTheme);
+            } else if (prefersDark) {
+                applyTheme('dark');
+            } else {
+                applyTheme('light'); // Default
+            }
+
+            // --- Core Calculation Functions (BigInt) ---
+            const ZERO = 0n, ONE = 1n, TWO = 2n;
+
+            /**
+             * 拡張ユークリッドの互除法 (BigInt対応版)。
+             * ax + by = gcd(a, b) となる [x, y, d] を返す。
+             * withStepsがtrueの場合、4番目の返り値として計算過程の文字列を返す。
+             */
+            function extGCD_BigInt(a, b, withSteps = false) {
+                if (!withSteps) {
+                    if (b === ZERO) return [1n, 0n, a];
+                    const [s, t, d] = extGCD_BigInt(b, a % b);
+                    return [t, s - (a / b) * t, d];
+                }
+
+                let steps = `ax + by = gcd(a, b) を解きます (a=${a}, b=${b})\n\n`;
+                let r_prev = a, r_curr = b;
+                let s_prev = 1n, s_curr = 0n;
+                let t_prev = 0n, t_curr = 1n;
+
+                steps += `初期状態 (i=0, 1):\n`;
+                steps += ` r_0 = ${r_prev}, s_0 = ${s_prev}, t_0 = ${t_prev}\n`;
+                steps += ` r_1 = ${r_curr}, s_1 = ${s_curr}, t_1 = ${t_curr}\n\n`;
+                
+                let i = 1;
+                while (r_curr !== 0n) {
+                    i++;
+                    const q = r_prev / r_curr;
+                    const r_next = r_prev - q * r_curr;
+                    const s_next = s_prev - q * s_curr;
+                    const t_next = t_prev - q * t_curr;
+
+                    steps += `ステップ ${i-1} (i=${i}):\n`;
+                    steps += ` q_${i-1} = floor(r_${i-2} / r_${i-1}) = floor(${r_prev} / ${r_curr}) = ${q}\n`;
+                    steps += ` r_${i} = r_${i-2} - q * r_${i-1} = ${r_prev} - ${q} * ${r_curr} = ${r_next}\n`;
+                    steps += ` s_${i} = s_${i-2} - q * s_${i-1} = ${s_prev} - ${q} * ${s_curr} = ${s_next}\n`;
+                    steps += ` t_${i} = t_${i-2} - q * t_${i-1} = ${t_prev} - ${q} * ${t_curr} = ${t_next}\n\n`;
+
+                    r_prev = r_curr; r_curr = r_next;
+                    s_prev = s_curr; s_curr = s_next;
+                    t_prev = t_curr; t_curr = t_next;
+                }
+
+                steps += `r_${i} = 0 となったので計算終了。\n`;
+                steps += `一つ前のステップ (i=${i-1}) の結果が解となります。\n`;
+
+                return [s_prev, t_prev, r_prev, steps];
+            }
+
+            /**
+             * 繰り返し二乗法 (a^n mod p) (BigInt対応版)。
+             * withStepsがtrueの場合、2番目の返り値として計算過程の文字列を返す。
+             */
+            function exp_mod(a, n, p, withSteps = false) {
+                let res = 1n;
+                let base = a % p;
+                let exp = n;
+                let steps = `a^n mod p を計算します (a=${a}, n=${n}, p=${p})\n\n`;
+                steps += `n の2進数表現: ${n.toString(2)}\n\n`;
+                steps += `初期値: result = 1, base = ${base}\n\n`;
+
+                let i = 0;
+                while (exp > 0n) {
+                    steps += `ステップ ${i}:\n`;
+                    steps += `  指数 = ${exp} (2進数: ${exp.toString(2)})\n`;
+                    if (exp % TWO === ONE) {
+                        res = (res * base) % p;
+                        steps += `  指数が奇数なので、result = (result * base) mod p = ${res}\n`;
+                    } else {
+                        steps += `  指数が偶数なので、resultは変更なし\n`;
+                    }
+                    base = (base * base) % p;
+                    exp = exp / TWO;
+                    steps += `  次の準備: base = (base * base) mod p = ${base}\n`;
+                    steps += `  次の準備: 指数 = floor(指数 / 2) = ${exp}\n\n`;
+                    i++;
+                }
+                steps += `計算終了。最終結果: ${res}\n`;
+                return withSteps ? [res, steps] : res;
+            }
+
+            // --- String Conversion Functions ---
+
+            function stringToCodePoints(str) {
+                const codePoints = [];
+                for (let i = 0; i < str.length; i++) {
+                    const code = str.codePointAt(i);
+                    if (code > 0xFFFF) { // サロゲートペアの場合
+                        i++;
+                    }
+                    codePoints.push(BigInt(code));
+                }
+                return codePoints;
+            }
+
+            function codePointsToString(arr) {
+                return String.fromCodePoint(...arr.map(n => Number(n)));
+            }
+
+            // --- UI Control ---
+
+            const navLinks = document.querySelectorAll('#nav-menu a');
+            const sections = document.querySelectorAll('main section');
+
+            function showSection(sectionId) {
+                sections.forEach(section => {
+                    section.classList.remove('active');
+                });
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                });
+
+                const activeSection = document.getElementById(sectionId || 'menu');
+                const activeLink = document.querySelector(`nav a[data-section="${sectionId}"]`);
+                if (activeSection) activeSection.classList.add('active');
+                if (activeLink) { activeLink.classList.add('active'); }
+                else { document.querySelector('nav a[data-section="menu"]').classList.add('active'); }
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = e.target.getAttribute('data-section');
+                    showSection(sectionId);
+                });
+            });
+
+            // --- Event Handlers for each section ---
+
+            // 拡張ユークリッド互除法
+            document.getElementById('run-extgcd').addEventListener('click', () => {
+                try {
+                    const a = BigInt(document.getElementById('extgcd-a').value);
+                    const b = BigInt(document.getElementById('extgcd-b').value);
+                    const [x, y, d, steps] = extGCD_BigInt(a, b, true);
+                    const resultDiv = document.getElementById('extgcd-result');
+                    resultDiv.textContent = `--- 計算過程 ---\n${steps}\n` +
+                        `--- 計算結果 ---\n` +
+                        `gcd(a, b) = d: ${d}\n` +
+                        `解 x: ${x}\n` +
+                        `解 y: ${y}\n\n` +
+                        `--- 検算 ---\nax + by = d\n` +
+                        `${a} * ${x} + ${b} * ${y} = ${a * x + b * y}`;
+                } catch (e) {
+                    document.getElementById('extgcd-result').textContent = 'エラー: 有効な整数を入力してください。';
+                }
+            });
+
+            // 繰り返し二乗法
+            document.getElementById('run-expmod').addEventListener('click', () => {
+                try {
+                    const a = BigInt(document.getElementById('expmod-a').value);
+                    const n = BigInt(document.getElementById('expmod-n').value);
+                    const p = BigInt(document.getElementById('expmod-p').value);
+                    const [result, steps] = exp_mod(a, n, p, true);
+                    document.getElementById('expmod-result').textContent = `--- 計算過程 ---\n${steps}\n` +
+                        `--- 計算結果 ---\n` +
+                        `${a}^${n} mod ${p} = ${result}\n`;
+                } catch (e) {
+                    document.getElementById('expmod-result').textContent = 'エラー: 有効な整数を入力してください。';
+                }
+            });
+
+            // キーペア作成
+            document.getElementById('set-random-primes').addEventListener('click', () => {
+                try {
+                    const primeListText = document.querySelector('#prime-list .result').textContent;
+                    const primes = primeListText.split(/,\s*/).filter(s => s.trim() !== '');
+
+                    if (primes.length < 2) {
+                        alert('素数リストから2つ以上の素数を取得できませんでした。');
+                        return;
+                    }
+
+                    let index1 = Math.floor(Math.random() * primes.length);
+                    let index2;
+                    do {
+                        index2 = Math.floor(Math.random() * primes.length);
+                    } while (index1 === index2);
+
+                    document.getElementById('keygen-p').value = primes[index1];
+                    document.getElementById('keygen-q').value = primes[index2];
+
+                } catch (e) {
+                    alert('ランダムな素数のセット中にエラーが発生しました: ' + e.message);
+                }
+            });
+
+            document.getElementById('run-keygen').addEventListener('click', () => {
+                const resultDiv = document.getElementById('keygen-result');
+                try {
+                    const p = BigInt(document.getElementById('keygen-p').value);
+                    const q = BigInt(document.getElementById('keygen-q').value);
+                    const e = BigInt(document.getElementById('keygen-e').value);
+
+                    const n = p * q;
+                    const phi = (p - ONE) * (q - ONE);
+
+                    const [x, y, gcd, steps] = extGCD_BigInt(e, phi, true);
+
+                    if (gcd !== ONE) {
+                        resultDiv.textContent = `エラー: e (${e}) と (p-1)(q-1) (${phi}) は互いに素ではありません。\ngcdは ${gcd} です。別のeを選んでください。`;
+                        return;
+                    }
+
+                    // 秘密指数 d を計算 (d*e ≡ 1 (mod phi))
+                    // dはxをphiで割った正の剰余
+                    const d = (x % phi + phi) % phi;
+
+                    resultDiv.textContent = `--- 計算過程 ---\n` +
+                        `1. n と φ(n) の計算:\n` +
+                        `   n = p * q = ${n}\n` +
+                        `   φ(n) = (p-1)*(q-1) = ${phi}\n\n` +
+                        `2. 秘密鍵 d の計算 (e*d ≡ 1 mod φ(n)):\n` +
+                        `   拡張ユークリッド互除法で e*x + φ(n)*y = gcd(e, φ(n)) を解きます。\n` +
+                        `${steps}` +
+                        `   d = x mod φ(n) = (${x} % ${phi} + ${phi}) % ${phi} = ${d}\n\n` +
+                        `--- 生成されたキーペア ---\n` +
+                        `公開鍵 (誰にでも公開してOK):\n` +
+                        `   {e, n} = {${e}, ${n}}\n\n` +
+                        `秘密鍵 (絶対に秘密にしてください):\n` +
+                        `   {d, n} = {${d}, ${n}}`;
+                    
+                    // 次の画面に値を自動入力
+                    document.getElementById('encrypt-e').value = e.toString();
+                    document.getElementById('encrypt-n').value = n.toString();
+                    document.getElementById('decrypt-d').value = d.toString();
+                    document.getElementById('decrypt-n').value = n.toString();
+
+                    // メッセージ作成・復号画面にも値を自動入力
+                    // ユーザーが一人でテストしやすいように、送受信者両方に入れておく
+                    document.getElementById('create-p-a').value = p.toString();
+                    document.getElementById('create-q-a').value = q.toString();
+                    document.getElementById('create-e-a').value = e.toString();
+                    document.getElementById('create-n-b').value = n.toString();
+                    document.getElementById('create-e-b').value = e.toString();
+
+                    document.getElementById('read-p-b').value = p.toString();
+                    document.getElementById('read-q-b').value = q.toString();
+                    document.getElementById('read-e-b').value = e.toString();
+                    document.getElementById('read-n-a').value = n.toString();
+                    document.getElementById('read-e-a').value = e.toString();
+
+                } catch (e) {
+                    resultDiv.textContent = 'エラー: 有効な素数と整数を入力してください。';
+                }
+            });
+
+            // 暗号化
+            document.getElementById('run-encrypt').addEventListener('click', () => {
+                const resultDiv = document.getElementById('encrypt-result');
+                try {
+                    const m = BigInt(document.getElementById('encrypt-m').value);
+                    const e = BigInt(document.getElementById('encrypt-e').value);
+                    const n = BigInt(document.getElementById('encrypt-n').value);
+
+                    if (m >= n) {
+                        resultDiv.textContent = 'エラー: 平文Mは法nより小さい必要があります。';
+                        return;
+                    }
+
+                    const [c, steps] = exp_mod(m, e, n, true);
+                    resultDiv.textContent = `--- 計算過程 (C = M^e mod n) ---\n` +
+                        `${steps}\n` +
+                        `--- 暗号化結果 ---\n` +
+                        `暗号文 C = ${c}\n\n` +
+                        `この暗号文を「復号」画面にコピーして、元の平文に戻せるか試してみましょう。`
+                        ;
+                    
+                    // 復号画面に暗号文を自動入力
+                    document.getElementById('decrypt-c').value = c.toString();
+
+                } catch (e) {
+                    resultDiv.textContent = 'エラー: 有効な数値を入力してください。';
+                }
+            });
+
+            // 復号
+            document.getElementById('run-decrypt').addEventListener('click', () => {
+                const resultDiv = document.getElementById('decrypt-result');
+                try {
+                    const c = BigInt(document.getElementById('decrypt-c').value);
+                    const d = BigInt(document.getElementById('decrypt-d').value);
+                    const n = BigInt(document.getElementById('decrypt-n').value);
+
+                    const [m, steps] = exp_mod(c, d, n, true);
+                    resultDiv.textContent = `--- 計算過程 (M = C^d mod n) ---\n` +
+                        `${steps}\n` +
+                        `--- 復号結果 ---\n` +
+                        `平文 M = ${m}\n\n元の平文に戻りました！`;
+                } catch (e) {
+                    resultDiv.textContent = 'エラー: 有効な数値を入力してください。';
+                }
+            });
+
+            // メッセージ作成（署名と暗号化）
+            document.getElementById('run-create-message').addEventListener('click', async () => {
+                const resultDiv = document.getElementById('create-message-result');
+                const spinner = document.getElementById('create-spinner');
+                resultDiv.textContent = '';
+                spinner.style.display = 'block';
+
+                // 非同期処理でUIのフリーズを防ぐ
+                await new Promise(resolve => setTimeout(resolve, 10));
+
+                try {
+                    // 送信者Aのキー
+                    const p_a = BigInt(document.getElementById('create-p-a').value);
+                    const q_a = BigInt(document.getElementById('create-q-a').value);
+                    const e_a = BigInt(document.getElementById('create-e-a').value);
+                    const n_a = p_a * q_a;
+                    const phi_a = (p_a - ONE) * (q_a - ONE);
+                    const [x_a, , gcd_a] = extGCD_BigInt(e_a, phi_a, false);
+                    if (gcd_a !== ONE) throw new Error(`送信者Aのe (${e_a}) と φ(n) (${phi_a}) が互いに素ではありません。`);
+                    const d_a = (x_a % phi_a + phi_a) % phi_a;
+
+                    // 受信者Bの公開鍵
+                    const n_b = BigInt(document.getElementById('create-n-b').value);
+                    const e_b = BigInt(document.getElementById('create-e-b').value);
+
+                    // 平文
+                    const message = document.getElementById('create-message-text').value;
+                    const codePoints = stringToCodePoints(message);
+
+                    // 各文字のコードポイントがnより小さいかチェック
+                    const maxCodePoint = codePoints.reduce((max, current) => (current > max ? current : max), 0n);
+                    if (maxCodePoint >= n_a || maxCodePoint >= n_b) {
+                        throw new Error(`エラー: メッセージの文字コード (${maxCodePoint}) が、法n (${n_a} または ${n_b}) 以上です。より大きな素数でキーを再生成してください。`);
+                    }
+
+                    let stepsLog = '';
+                    const encryptedBlocks = [];
+                    for (const [index, m] of codePoints.entries()) {
+                        const withSteps = (index === 0);
+
+                        // 1. 送信者Aの秘密鍵で署名
+                        const signResult = exp_mod(m, d_a, n_a, withSteps);
+                        const signed = withSteps ? signResult[0] : signResult;
+
+                        // 2. 受信者Bの公開鍵で暗号化
+                        const encryptResult = exp_mod(signed, e_b, n_b, withSteps);
+                        const encrypted = withSteps ? encryptResult[0] : encryptResult;
+                        encryptedBlocks.push(encrypted.toString());
+
+                        if (withSteps) {
+                            const signSteps = signResult[1];
+                            const encryptSteps = encryptResult[1];
+                            stepsLog = `--- 計算過程 (最初の1文字 '${String.fromCodePoint(Number(m))}' (コードポイント: ${m})) ---\n\n` +
+                                       `1. 送信者Aの秘密鍵で署名 (S = M^d_A mod n_A):\n${signSteps}\n` +
+                                       `   署名データ S = ${signed}\n\n` +
+                                       `2. 受信者Bの公開鍵で暗号化 (C = S^e_B mod n_B):\n${encryptSteps}\n` +
+                                       `   最終的な暗号文 C = ${encrypted}\n\n`;
+                        }
+                    }
+
+                    const finalCiphertext = encryptedBlocks.join(',');
+                    resultDiv.textContent = (stepsLog ? stepsLog : '') +
+                        `--- メッセージ作成完了 ---\n` +
+                        `生成された暗号文（これをコピーして受信者に渡します）:\n${finalCiphertext}`;
+                    
+                    document.getElementById('read-ciphertext').value = finalCiphertext;
+
+                } catch (e) {
+                    resultDiv.textContent = `エラー: ${e.message}`;
+                } finally {
+                    spinner.style.display = 'none';
+                }
+            });
+
+            // メッセージ復号（復号と署名検証）
+            document.getElementById('run-read-message').addEventListener('click', async () => {
+                const resultDiv = document.getElementById('read-message-result');
+                const spinner = document.getElementById('read-spinner');
+                resultDiv.textContent = '';
+                spinner.style.display = 'block';
+
+                await new Promise(resolve => setTimeout(resolve, 10));
+
+                try {
+                    // 受信者Bのキー
+                    const p_b = BigInt(document.getElementById('read-p-b').value);
+                    const q_b = BigInt(document.getElementById('read-q-b').value);
+                    const e_b = BigInt(document.getElementById('read-e-b').value);
+                    const n_b = p_b * q_b;
+                    const phi_b = (p_b - ONE) * (q_b - ONE);
+                    const [x_b, , gcd_b] = extGCD_BigInt(e_b, phi_b, false);
+                    if (gcd_b !== ONE) throw new Error(`受信者Bのe (${e_b}) と φ(n) (${phi_b}) が互いに素ではありません。`);
+                    const d_b = (x_b % phi_b + phi_b) % phi_b;
+
+                    // 送信者Aの公開鍵
+                    const n_a = BigInt(document.getElementById('read-n-a').value);
+                    const e_a = BigInt(document.getElementById('read-e-a').value);
+
+                    // 暗号文
+                    const ciphertext = document.getElementById('read-ciphertext').value;
+                    if (!ciphertext) throw new Error('暗号文が入力されていません。');
+                    const encryptedBlocks = ciphertext.split(',').map(s => BigInt(s.trim()));
+
+                    let stepsLog = '';
+                    const decryptedCodePoints = [];
+                    for (const [index, c] of encryptedBlocks.entries()) {
+                        const withSteps = (index === 0);
+
+                        // 1. 受信者Bの秘密鍵で復号
+                        const decryptResult = exp_mod(c, d_b, n_b, withSteps);
+                        const decrypted = withSteps ? decryptResult[0] : decryptResult;
+
+                        // 2. 送信者Aの公開鍵で署名検証
+                        const verifyResult = exp_mod(decrypted, e_a, n_a, withSteps);
+                        const verified = withSteps ? verifyResult[0] : verifyResult;
+
+                        decryptedCodePoints.push(verified);
+
+                        if (withSteps) {
+                            const decryptSteps = decryptResult[1];
+                            const verifySteps = verifyResult[1];
+                            stepsLog = `--- 計算過程 (最初の1ブロック '${c}') ---\n\n` +
+                                       `1. 受信者Bの秘密鍵で復号 (S = C^d_B mod n_B):\n${decryptSteps}\n` +
+                                       `   復号された署名データ S = ${decrypted}\n\n` +
+                                       `2. 送信者Aの公開鍵で署名検証 (M = S^e_A mod n_A):\n${verifySteps}\n` +
+                                       `   元の文字のコードポイント M = ${verified}\n\n`;
+                        }
+                    }
+
+                    const originalMessage = codePointsToString(decryptedCodePoints);
+
+                    resultDiv.textContent = (stepsLog ? stepsLog : '') +
+                        `--- メッセージ復号完了 ---\n` +
+                        `復号・署名検証されたメッセージ:\n\n${originalMessage}`;
+
+                } catch (e) {
+                    resultDiv.textContent = `エラー: ${e.message}`;
+                } finally {
+                    spinner.style.display = 'none';
+                }
+            });
+
+            // 初期表示
+            showSection('menu');
+        });
+    </script>
+
+</body>
+</html>
