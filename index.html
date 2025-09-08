@@ -870,8 +870,18 @@ Hello, World! 👋</textarea>
                     const finalCiphertext = encryptedBlocks.join(',');
                     resultDiv.textContent = (stepsLog ? stepsLog : '') +
                         `--- メッセージ作成完了 ---\n` +
-                        `生成された暗号文（これをコピーして受信者に渡します）:\n${finalCiphertext}`;
-                    
+                        `生成された暗号文（これをコピーして受信者に渡します）:\n${finalCiphertext}\n\n` +
+                        `--------------------\n` +
+                        `署名検証に必要な情報（送信者Aのn,eと暗号文）をクリップボードにコピーします...`;
+
+                    const copyText = `${n_a.toString()},${e_a.toString()}\n${finalCiphertext}`;
+                    navigator.clipboard.writeText(copyText).then(() => {
+                        resultDiv.textContent += '\nコピーしました！';
+                    }).catch(err => {
+                        console.error('クリップボードへのコピーに失敗しました: ', err);
+                        resultDiv.textContent += '\nクリップボードへのコピーに失敗しました。手動でコピーしてください。';
+                    });
+
                     document.getElementById('read-ciphertext').value = finalCiphertext;
 
                 } catch (e) {
