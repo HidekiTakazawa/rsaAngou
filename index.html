@@ -734,26 +734,36 @@ Hello, World! 👋</textarea>
                         `   {e, n} = {${e}, ${n}}\n\n` +
                         `秘密鍵 (絶対に秘密にしてください):\n` +
                         `   {d, n} = {${d}, ${n}}`;
-                    
+                    const copyText = `私の公開キー　法nと公開指数です。\n法n: ${n.toString()}\n公開指数e: ${e.toString()}`;
+                    navigator.clipboard.writeText(copyText).then(() => {
+                        resultDiv.textContent += '\n\n--------------------\n公開鍵情報をクリップボードにコピーしました！';
+                    }).catch(err => {
+                        console.error('クリップボードへのコピーに失敗しました: ', err);
+                        resultDiv.textContent += '\n\n--------------------\nクリップボードへのコピーに失敗しました。手動でコピーしてください。';
+                    });
+
                     // 次の画面に値を自動入力
                     document.getElementById('encrypt-e').value = e.toString();
                     document.getElementById('encrypt-n').value = n.toString();
                     document.getElementById('decrypt-d').value = d.toString();
                     document.getElementById('decrypt-n').value = n.toString();
 
-                    // メッセージ作成・復号画面にも値を自動入力
-                    // ユーザーが一人でテストしやすいように、送受信者両方に入れておく
+                    // メッセージ作成・復号画面に、実行者のキー情報を自動入力
+                    // 送信者(A) = 実行者として設定
                     document.getElementById('create-p-a').value = p.toString();
                     document.getElementById('create-q-a').value = q.toString();
                     document.getElementById('create-e-a').value = e.toString();
-                    document.getElementById('create-n-b').value = n.toString();
-                    document.getElementById('create-e-b').value = e.toString();
+                    // 受信者(B)の情報は空欄にし、相手の公開鍵を手動で入力するように促す
+                    document.getElementById('create-n-b').value = '';
+                    document.getElementById('create-e-b').value = '';
 
+                    // 受信者(B) = 実行者として設定
                     document.getElementById('read-p-b').value = p.toString();
                     document.getElementById('read-q-b').value = q.toString();
                     document.getElementById('read-e-b').value = e.toString();
-                    document.getElementById('read-n-a').value = n.toString();
-                    document.getElementById('read-e-a').value = e.toString();
+                    // 送信者(A)の情報は空欄にし、相手の公開鍵を手動で入力するように促す
+                    document.getElementById('read-n-a').value = '';
+                    document.getElementById('read-e-a').value = '';
 
                 } catch (e) {
                     resultDiv.textContent = 'エラー: 有効な素数と整数を入力してください。';
